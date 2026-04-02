@@ -39,8 +39,9 @@ export async function middleware(request: NextRequest) {
 
   // Protected routes
   const isLoginPage = request.nextUrl.pathname.startsWith('/login');
+  const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback');
 
-  if (!user && !isLoginPage) {
+  if (!user && !isLoginPage && !isAuthCallback) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
