@@ -1,59 +1,70 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // 1. Initialize the response early
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
-  })
+  });
 
+  // 2. Setup the Supabase client with strict env variables
+  // We use ! to ensure the app crashes if these are missing, 
+  // rather than failing silently with placeholders.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options })
+        setAll(cookiesToSet) {
+          // Update the request cookies (for the current server execution)
+          cookiesToSet.forEach(({ name, value, options }) =>
+            request.cookies.set(name, value)
+          );
+          
+          // Refresh the response to include the new request headers
           response = NextResponse.next({
             request: {
               headers: request.headers,
             },
-          })
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({ name, value: '', ...options })
+          });
+
+          // Update the response cookies (for the browser to save)
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
         },
       },
     }
-  )
+  );
 
-  // This checks if there is a real, logged-in user
-  const { data: { user } } = await supabase.auth.getUser()
+  // 3. Refresh the session if it exists
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // 1. If NO user and they aren't on the login page -> Kick to /login
-  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // 4. Route Protection Logic
+  const isLoginPage = request.nextUrl.pathname.startsWith('/login');
+  const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback');
+
+  // If no user and trying to access the dashboard/fleet -> Kick to login
+  if (!user && !isLoginPage && !isAuthCallback) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // 2. If user IS logged in and they try to go to /login -> Send to dashboard
-  if (user && request.nextUrl.pathname.startsWith('/login')) {
-    return NextResponse.redirect(new URL('/', request.url))
+  // If user is logged in but trying to access the login page -> Kick to dashboard
+  if (user && isLoginPage) {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
-  return response
+  return response;
 }
 
+// Ensure the middleware runs on all routes except static assets
 export const config = {
   matcher: [
     /*
@@ -61,8 +72,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * - Public images (png, jpg, etc)
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-}
+};
