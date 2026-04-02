@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
   Wrench, Users, Search, Bell, Plus,
   AlertCircle, Clock, Navigation, ChevronRight
 } from 'lucide-react';
+import FleetMap, { type Job } from '@/components/FleetMap';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -19,16 +20,18 @@ const stats = [
   { label: 'Emergencies', value: 2, icon: AlertCircle, color: 'text-red-500' },
 ];
 
-const jobs = [
-  { id: '#8740BC', title: 'Sewer Leak - Basement', customer: 'Sarah Mitchell', address: '142 Oak Street, Suite 8', date: 'Mar 27, 2026', priority: 'EMERGENCY', status: 'Pending', color: 'border-l-red-500' },
-  { id: '#8740BD', title: 'Water Heater Replacement', customer: 'James Rodriguez', address: '890 Pine Avenue, Apt 3', date: 'Mar 27, 2026', priority: 'HIGH', status: 'In Progress', color: 'border-l-orange-500', assigned: 'Mike Henderson' },
-  { id: '#8740BE', title: 'Kitchen Faucet Install', customer: 'Emily Chen', address: '2450 Willow Creek Dr', date: 'Mar 28, 2026', priority: 'MEDIUM', status: 'Pending', color: 'border-l-blue-500' },
-  { id: '#8740BF', title: 'Pipe Burst - Emergency', customer: 'David Thompson', address: '78 Riverdale Rd, Beaverton', date: 'Mar 27, 2026', priority: 'EMERGENCY', status: 'In Progress', color: 'border-l-red-500', assigned: 'Carlos Vega' },
-  { id: '#8740C0', title: 'Toilet Repair', customer: 'Lisa Park', address: '3320 Maple Lane, Lake Oswego', date: 'Mar 26, 2026', priority: 'LOW', status: 'Completed', color: 'border-l-green-500', assigned: 'Tony Russo' },
-  { id: '#8740C1', title: 'Drain Cleaning - Main Line', customer: 'Robert Kim', address: '567 Cedar Blvd, Tigard', date: 'Mar 28, 2026', priority: 'HIGH', status: 'Pending', color: 'border-l-orange-500' },
+const initialJobs: Job[] = [
+  { id: '#8740BC', title: 'Sewer Leak - Basement', customer: 'Sarah Mitchell', address: '142 Oak Street, Suite 8', date: 'Mar 27, 2026', priority: 'EMERGENCY', status: 'Pending', color: 'border-l-red-500', lat: 45.523062, lng: -122.676482 },
+  { id: '#8740BD', title: 'Water Heater Replacement', customer: 'James Rodriguez', address: '890 Pine Avenue, Apt 3', date: 'Mar 27, 2026', priority: 'HIGH', status: 'In Progress', color: 'border-l-orange-500', assigned: 'Mike Henderson', lat: 45.543062, lng: -122.656482 },
+  { id: '#8740BE', title: 'Kitchen Faucet Install', customer: 'Emily Chen', address: '2450 Willow Creek Dr', date: 'Mar 28, 2026', priority: 'MEDIUM', status: 'Pending', color: 'border-l-blue-500', lat: 45.513062, lng: -122.686482 },
+  { id: '#8740BF', title: 'Pipe Burst - Emergency', customer: 'David Thompson', address: '78 Riverdale Rd, Beaverton', date: 'Mar 27, 2026', priority: 'EMERGENCY', status: 'In Progress', color: 'border-l-red-500', assigned: 'Carlos Vega', lat: 45.483062, lng: -122.806482 },
+  { id: '#8740C0', title: 'Toilet Repair', customer: 'Lisa Park', address: '3320 Maple Lane, Lake Oswego', date: 'Mar 26, 2026', priority: 'LOW', status: 'Completed', color: 'border-l-green-500', assigned: 'Tony Russo', lat: 45.413062, lng: -122.666482 },
+  { id: '#8740C1', title: 'Drain Cleaning - Main Line', customer: 'Robert Kim', address: '567 Cedar Blvd, Tigard', date: 'Mar 28, 2026', priority: 'HIGH', status: 'Pending', color: 'border-l-orange-500', lat: 45.433062, lng: -122.776482 },
 ];
 
 export default function Dashboard() {
+  const [activeJob, setActiveJob] = useState<Job | null>(null);
+
   return (
     <div className="min-h-screen bg-[#0f1117] text-gray-100 font-sans selection:bg-blue-500/30">
       {/* Top Navigation */}
@@ -103,12 +106,17 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
-              {jobs.map((job, i) => (
-                <div key={i} className={cn(
-                  "bg-[#161922] p-6 rounded-[2rem] border-l-[6px] border-t border-r border-b border-gray-800/40 hover:bg-[#1c202b] transition-all cursor-pointer group hover:shadow-2xl hover:shadow-black/40",
-                  job.color
-                )}>
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 mb-12">
+              {initialJobs.map((job, i) => (
+                <div
+                  key={i}
+                  onClick={() => setActiveJob(job)}
+                  className={cn(
+                    "bg-[#161922] p-6 rounded-[2rem] border-l-[6px] border-t border-r border-b border-gray-800/40 hover:bg-[#1c202b] transition-all cursor-pointer group hover:shadow-2xl hover:shadow-black/40",
+                    job.color,
+                    activeJob?.id === job.id && "ring-2 ring-blue-500/50 bg-[#1c202b]"
+                  )}
+                >
                    <div className="flex justify-between items-start mb-6">
                       <div className="p-3 bg-[#1f232d] rounded-2xl text-gray-400 group-hover:text-blue-400 transition-colors"><Wrench size={20}/></div>
                       <div className="text-right">
@@ -157,6 +165,12 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
+
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold tracking-tight mb-1">Fleet Location & Dispatch</h2>
+              <p className="text-gray-500 text-sm">Real-time plumber recommendations and dispatch control</p>
+            </div>
+            <FleetMap activeJob={activeJob} />
           </div>
 
           {/* Activity Feed Sidebar */}
