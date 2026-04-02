@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
   Wrench, Users, Search, Bell, Plus,
-  AlertCircle, Clock, Navigation, ChevronRight
+  AlertCircle, Clock, Navigation, ChevronRight, LogOut
 } from 'lucide-react';
 import FleetMap, { type Job } from '@/components/FleetMap';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -31,6 +33,30 @@ const initialJobs: Job[] = [
 
 export default function Dashboard() {
   const [activeJob, setActiveJob] = useState<Job | null>(null);
+  const [userProfile, setUserProfile] = useState<{ full_name?: string } | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+
+        setUserProfile(profile || { full_name: user.email });
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   return (
     <div className="min-h-screen bg-[#0f1117] text-gray-100 font-sans selection:bg-blue-500/30">
@@ -64,6 +90,21 @@ export default function Dashboard() {
             <Bell size={20}/>
             <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#1f232d]"></div>
           </div>
+
+          <div className="flex items-center gap-4 pl-4 border-l border-gray-800">
+            <div className="text-right">
+              <div className="text-xs font-black uppercase tracking-widest text-gray-500">Dispatcher</div>
+              <div className="text-sm font-bold text-white">{userProfile?.full_name || 'Loading...'}</div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all group"
+              title="Logout"
+            >
+              <LogOut size={20} className="group-hover:scale-110 transition-transform" />
+            </button>
+          </div>
+
           <button className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 font-bold transition-all shadow-lg shadow-blue-600/20">
             <Plus size={20}/> New Job
           </button>
