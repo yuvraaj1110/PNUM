@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
   });
 
   // 2. Setup the Supabase client with strict env variables
-  // We use ! to ensure the app crashes if these are missing, 
+  // We use ! to ensure the app crashes if these are missing,
   // rather than failing silently with placeholders.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) =>
             request.cookies.set(name, value)
           );
-          
+
           // Refresh the response to include the new request headers
           response = NextResponse.next({
             request: {
@@ -51,7 +51,7 @@ export async function middleware(request: NextRequest) {
   const isLoginPage = request.nextUrl.pathname.startsWith('/login');
   const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback');
 
-  // If no user and trying to access the dashboard/fleet -> Kick to login
+  // If no user and trying to access the dashboard -> Kick to login
   if (!user && !isLoginPage && !isAuthCallback) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
