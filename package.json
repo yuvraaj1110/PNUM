@@ -6,18 +6,27 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "simulate": "npx tsx scripts/simulateMovement.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.100.1",
+<<<<<<< Updated upstream
     "@types/mapbox-gl": "^3.4.1",
+=======
+    "@types/leaflet": "^1.9.21",
+>>>>>>> Stashed changes
     "clsx": "^2.1.1",
+    "dotenv": "^17.3.1",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.7.0",
     "mapbox-gl": "^3.20.0",
     "next": "15.1.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-leaflet": "^5.0.0",
+    "react-leaflet-cluster": "^4.1.3",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

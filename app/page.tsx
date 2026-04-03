@@ -1,11 +1,21 @@
 'use client';
 
+<<<<<<< Updated upstream
 import React, { useState, useEffect } from 'react';
+=======
+import React from 'react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+>>>>>>> Stashed changes
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
   Wrench, Users, Search, Bell, Plus,
+<<<<<<< Updated upstream
   AlertCircle, Clock, Navigation, ChevronRight, LogOut
+=======
+  AlertCircle, Clock, Navigation, ChevronRight, Radio
+>>>>>>> Stashed changes
 } from 'lucide-react';
 import FleetMap, { type Job } from '@/components/FleetMap';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +24,13 @@ import { useRouter } from 'next/navigation';
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+const MiniMapWidget = dynamic(() => import('@/components/MiniMapWidget'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[280px] rounded-[2rem] bg-[#161922] border border-gray-800/50 animate-pulse" />
+  ),
+});
 
 const stats = [
   { label: 'Total Jobs', value: 8, icon: Wrench, color: 'text-gray-400' },
@@ -64,15 +81,15 @@ export default function Dashboard() {
       <nav className="flex items-center justify-between px-6 py-3 bg-[#161922] border-b border-gray-800 sticky top-0 z-50">
         <div className="flex items-center gap-10">
           <div className="flex items-center gap-2 text-blue-400 font-bold text-2xl tracking-tighter italic">
-            <div className="p-1.5 bg-blue-600 rounded-lg text-white shadow-lg shadow-blue-500/20"><Wrench size={22}/></div>
+            <div className="p-1.5 bg-blue-600 rounded-lg text-white shadow-lg shadow-blue-500/20"><Wrench size={22} /></div>
             Lapras
           </div>
           <div className="flex gap-8 text-sm font-medium text-gray-400">
-            <span className="flex items-center gap-2 text-white cursor-pointer hover:text-blue-400 transition-all group">
-              <Users size={18} className="group-hover:scale-110 transition-transform"/>
+            <Link href="/fleet" className="flex items-center gap-2 text-white cursor-pointer hover:text-blue-400 transition-all group">
+              <Radio size={18} className="group-hover:scale-110 transition-transform" />
               Live Fleet
               <span className="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full text-[10px]">4 Online</span>
-            </span>
+            </Link>
             <span className="cursor-pointer hover:text-white transition-colors">Customers</span>
             <span className="cursor-pointer hover:text-white transition-colors">Analytics</span>
           </div>
@@ -80,14 +97,14 @@ export default function Dashboard() {
 
         <div className="flex items-center gap-6">
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-400 transition-colors" size={16}/>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-400 transition-colors" size={16} />
             <input
               placeholder="Search active jobs..."
               className="bg-[#1f232d] border border-transparent focus:border-blue-500/50 outline-none rounded-xl py-2.5 pl-10 pr-4 text-sm w-72 transition-all placeholder:text-gray-600"
             />
           </div>
           <div className="p-2.5 bg-[#1f232d] rounded-xl text-gray-400 cursor-pointer hover:text-white hover:bg-[#2a2f3a] transition-all relative">
-            <Bell size={20}/>
+            <Bell size={20} />
             <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#1f232d]"></div>
           </div>
 
@@ -106,7 +123,7 @@ export default function Dashboard() {
           </div>
 
           <button className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 font-bold transition-all shadow-lg shadow-blue-600/20">
-            <Plus size={20}/> New Job
+            <Plus size={20} /> New Job
           </button>
         </div>
       </nav>
@@ -120,7 +137,7 @@ export default function Dashboard() {
                 "p-4 rounded-2xl bg-[#1f232d] group-hover:scale-110 transition-transform bg-opacity-10",
                 stat.color
               )}>
-                <stat.icon size={32}/>
+                <stat.icon size={32} />
               </div>
               <div>
                 <div className="text-3xl font-black tracking-tight">{stat.value}</div>
@@ -128,6 +145,11 @@ export default function Dashboard() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* ═══ Mini-Map Widget ═══ */}
+        <div className="mb-12">
+          <MiniMapWidget />
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -147,6 +169,7 @@ export default function Dashboard() {
               </div>
             </div>
 
+<<<<<<< Updated upstream
             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 mb-12">
               {initialJobs.map((job, i) => (
                 <div
@@ -165,44 +188,59 @@ export default function Dashboard() {
                         <div className="text-[10px] text-gray-600 font-medium italic">{job.date}</div>
                       </div>
                    </div>
+=======
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+              {jobs.map((job, i) => (
+                <div key={i} className={cn(
+                  "bg-[#161922] p-6 rounded-[2rem] border-l-[6px] border-t border-r border-b border-gray-800/40 hover:bg-[#1c202b] transition-all cursor-pointer group hover:shadow-2xl hover:shadow-black/40",
+                  job.color
+                )}>
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="p-3 bg-[#1f232d] rounded-2xl text-gray-400 group-hover:text-blue-400 transition-colors"><Wrench size={20} /></div>
+                    <div className="text-right">
+                      <div className="text-gray-500 text-[10px] font-black uppercase tracking-widest leading-none mb-1">ID {job.id}</div>
+                      <div className="text-[10px] text-gray-600 font-medium italic">{job.date}</div>
+                    </div>
+                  </div>
+>>>>>>> Stashed changes
 
-                   <h3 className="font-black text-xl mb-2 group-hover:text-blue-50 text-white transition-colors">{job.title}</h3>
+                  <h3 className="font-black text-xl mb-2 group-hover:text-blue-50 text-white transition-colors">{job.title}</h3>
 
-                   <div className="space-y-2 mb-6">
-                      <div className="flex items-center gap-2 text-sm text-gray-300 font-medium">
-                        <Users size={14} className="text-blue-500/50"/> {job.customer}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Navigation size={14} className="opacity-30"/> {job.address}
-                      </div>
-                   </div>
+                  <div className="space-y-2 mb-6">
+                    <div className="flex items-center gap-2 text-sm text-gray-300 font-medium">
+                      <Users size={14} className="text-blue-500/50" /> {job.customer}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Navigation size={14} className="opacity-30" /> {job.address}
+                    </div>
+                  </div>
 
-                   <div className="flex justify-between items-center pt-5 border-t border-gray-800/60">
-                      <span className={cn(
-                        "text-[10px] font-black px-3 py-1.5 rounded-full tracking-wider",
-                        job.priority === 'EMERGENCY' && 'bg-red-500/10 text-red-500 border border-red-500/20',
-                        job.priority === 'HIGH' && 'bg-orange-500/10 text-orange-500 border border-orange-500/20',
-                        job.priority !== 'EMERGENCY' && job.priority !== 'HIGH' && 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
-                      )}>
-                        {job.priority}
-                      </span>
-                      <div className="flex items-center gap-2 group/status">
-                        <div className={cn(
-                          "w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]",
-                          job.status === 'In Progress' ? 'bg-blue-400 animate-pulse' :
+                  <div className="flex justify-between items-center pt-5 border-t border-gray-800/60">
+                    <span className={cn(
+                      "text-[10px] font-black px-3 py-1.5 rounded-full tracking-wider",
+                      job.priority === 'EMERGENCY' && 'bg-red-500/10 text-red-500 border border-red-500/20',
+                      job.priority === 'HIGH' && 'bg-orange-500/10 text-orange-500 border border-orange-500/20',
+                      job.priority !== 'EMERGENCY' && job.priority !== 'HIGH' && 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                    )}>
+                      {job.priority}
+                    </span>
+                    <div className="flex items-center gap-2 group/status">
+                      <div className={cn(
+                        "w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]",
+                        job.status === 'In Progress' ? 'bg-blue-400 animate-pulse' :
                           job.status === 'Completed' ? 'bg-green-500' : 'bg-orange-400'
-                        )}></div>
-                        <span className="text-[11px] font-bold text-gray-300 group-hover/status:text-white transition-colors">{job.status}</span>
-                        <ChevronRight size={14} className="text-gray-700 group-hover/status:translate-x-1 transition-transform"/>
-                      </div>
-                   </div>
+                      )}></div>
+                      <span className="text-[11px] font-bold text-gray-300 group-hover/status:text-white transition-colors">{job.status}</span>
+                      <ChevronRight size={14} className="text-gray-700 group-hover/status:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
 
-                   {job.assigned && (
+                  {job.assigned && (
                     <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-blue-500/5 rounded-xl border border-blue-500/10">
                       <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
                       <span className="text-[10px] text-blue-400 font-bold uppercase tracking-tight">Assigned: {job.assigned}</span>
                     </div>
-                   )}
+                  )}
                 </div>
               ))}
             </div>
@@ -218,7 +256,7 @@ export default function Dashboard() {
           <aside className="w-full lg:w-96 bg-[#161922] p-8 rounded-[2.5rem] border border-gray-800/50 self-start shadow-xl">
             <div className="flex justify-between items-center mb-10">
               <h3 className="font-black text-lg flex items-center gap-3">
-                <div className="p-2 bg-blue-500/10 rounded-lg"><Navigation size={18} className="text-blue-400"/></div>
+                <div className="p-2 bg-blue-500/10 rounded-lg"><Navigation size={18} className="text-blue-400" /></div>
                 Activity Feed
               </h3>
               <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
@@ -241,7 +279,7 @@ export default function Dashboard() {
                       <span className="text-blue-400 font-bold hover:underline cursor-pointer">{activity.job}</span>
                     </div>
                     <div className="text-[10px] text-gray-600 font-bold mt-1.5 uppercase tracking-widest flex items-center gap-1.5">
-                      <Clock size={10}/> {activity.time}
+                      <Clock size={10} /> {activity.time}
                     </div>
                   </div>
                 </div>
