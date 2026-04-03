@@ -2,6 +2,9 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  console.log(`[Middleware] Pathname: ${pathname}`);
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -17,7 +20,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
           response = NextResponse.next({
@@ -37,16 +40,29 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protected routes
-  const isLoginPage = request.nextUrl.pathname.startsWith('/login');
-  const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback');
+  console.log(`[Middleware] User Exists?: ${!!user}`);
 
-  if (!user && !isLoginPage && !isAuthCallback) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  // Protected routes
+  const isLoginPage = pathname.startsWith('/login');
+  const isAuthCallback = pathname.startsWith('/auth/callback');
+  const isPublicFile = pathname.includes('.') || pathname.startsWith('/_next');
+
+  if (isPublicFile || isAuthCallback) {
+    return response;
+  }
+
+  if (!user && !isLoginPage) {
+    console.log(`[Middleware] Redirecting to /login`);
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
   }
 
   if (user && isLoginPage) {
-    return NextResponse.redirect(new URL('/', request.url));
+    console.log(`[Middleware] User logged in, redirecting to /`);
+    const url = request.nextUrl.clone();
+    url.pathname = '/';
+    return NextResponse.redirect(url);
   }
 
   return response;
