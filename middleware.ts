@@ -2,7 +2,14 @@ import { type NextRequest } from 'next/server';
 import { updateSession } from '@/utils/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
-  return await updateSession(request);
+  const { user, supabaseResponse } = await updateSession(request);
+
+  console.log('--- MIDDLEWARE CHECK ---', {
+    user: !!user,
+    path: request.nextUrl.pathname
+  });
+
+  return supabaseResponse;
 }
 
 export const config = {
