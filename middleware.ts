@@ -51,7 +51,7 @@ export async function middleware(request: NextRequest) {
   const isLoginPage = request.nextUrl.pathname.startsWith('/login');
   const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback');
 
-  // If no user and trying to access the dashboard/fleet -> Kick to login
+  // If no user and trying to access the dashboard -> Kick to login
   if (!user && !isLoginPage && !isAuthCallback) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
