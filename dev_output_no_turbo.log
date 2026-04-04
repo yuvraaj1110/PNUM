@@ -1,0 +1,11 @@
+ ⚠ Port 3000 is in use, trying 3001 instead.
+ ⚠ Port 3001 is in use, trying 3002 instead.
+ ⚠ Port 3002 is in use, trying 3003 instead.
+   ▲ Next.js 15.2.8
+   - Local:        http://localhost:3003
+   - Network:      http://192.168.0.2:3003
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.7s
+[?25h
