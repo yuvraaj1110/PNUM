@@ -1,0 +1,15 @@
+
+> lapras@0.1.0 dev
+> next dev --turbopack
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+ ⚠ Port 3001 is in use, trying 3002 instead.
+   ▲ Next.js 15.2.8 (Turbopack)
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.0.2:3002
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Compiled in 2.1s
+ ✓ Ready in 4.6s
+[?25h
