@@ -1,0 +1,464 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ═══════════════════════════════════════════
+   Fleet Map — Core Container Styles
+   ═══════════════════════════════════════════ */
+
+.fleet-map-container {
+  width: 100%;
+  height: 100%;
+}
+
+.mini-map-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* ═══════════════════════════════════════════
+   Plumber Markers — Blue Dots
+   ═══════════════════════════════════════════ */
+
+.plumber-marker {
+  transition: transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+.plumber-dot {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: -0.5px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 0 0 3px rgba(250, 204, 21, 0.15),
+    0 0 24px rgba(250, 204, 21, 0.35),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.3s;
+  position: relative;
+}
+
+.plumber-dot::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(250, 204, 21, 0.15);
+  animation: plumber-ring 3s ease-in-out infinite;
+}
+
+.plumber-dot:hover {
+  transform: scale(1.15);
+  box-shadow:
+    0 0 0 4px rgba(250, 204, 21, 0.25),
+    0 0 32px rgba(250, 204, 21, 0.5),
+    0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.plumber-dot.highlighted {
+  border-color: #fbbf24;
+  box-shadow:
+    0 0 0 4px rgba(251, 191, 36, 0.2),
+    0 0 28px rgba(251, 191, 36, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.plumber-dot.highlighted::after {
+  border-color: rgba(251, 191, 36, 0.25);
+}
+
+@keyframes plumber-ring {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+}
+
+/* ═══════════════════════════════════════════
+   Job Markers — Red Pulsing Pings
+   ═══════════════════════════════════════════ */
+
+.job-marker {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.job-dot {
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.5);
+  position: relative;
+  z-index: 3;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+}
+
+.job-pulse-ring {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.2);
+  animation: pulse-ring 2.5s ease-out infinite;
+  z-index: 1;
+}
+
+.job-pulse-ring.delay {
+  animation-delay: 1.25s;
+}
+
+.job-marker.emergency .job-dot {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  box-shadow: 0 0 18px rgba(220, 38, 38, 0.7);
+}
+
+.job-marker.emergency .job-pulse-ring {
+  background: rgba(220, 38, 38, 0.25);
+  animation-duration: 1.5s;
+}
+
+.job-marker.emergency .job-pulse-ring.delay {
+  animation-delay: 0.75s;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Cluster Markers
+   ═══════════════════════════════════════════ */
+
+.cluster-marker {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #ca8a04 0%, #facc15 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 900;
+  font-size: 18px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 0 0 4px rgba(250, 204, 21, 0.12),
+    0 0 30px rgba(250, 204, 21, 0.3),
+    0 6px 20px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cluster-marker:hover {
+  transform: scale(1.1);
+  box-shadow:
+    0 0 0 5px rgba(250, 204, 21, 0.2),
+    0 0 40px rgba(250, 204, 21, 0.45),
+    0 6px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* ═══════════════════════════════════════════
+   Leaflet Dark-Theme Overrides
+   ═══════════════════════════════════════════ */
+
+.leaflet-container {
+  background: #0c0c0c !important;
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(22, 25, 34, 0.95) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  color: #e5e7eb !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(22, 25, 34, 0.95) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.leaflet-popup-close-button {
+  color: #6b7280 !important;
+  font-size: 18px !important;
+  padding: 8px 10px !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #ffffff !important;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(22, 25, 34, 0.9) !important;
+  color: #e5e7eb !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 16px !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(31, 35, 45, 0.95) !important;
+  color: #ffffff !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(15, 17, 23, 0.7) !important;
+  color: #4b5563 !important;
+  font-size: 9px !important;
+  border-radius: 8px 0 0 0 !important;
+  backdrop-filter: blur(8px);
+}
+
+.leaflet-control-attribution a {
+  color: #6b7280 !important;
+}
+
+/* ═══════════════════════════════════════════
+   Map Popup Content Styles
+   ═══════════════════════════════════════════ */
+
+.map-popup {
+  padding: 16px 18px;
+  min-width: 180px;
+}
+
+.popup-name {
+  font-weight: 900;
+  font-size: 14px;
+  color: #ffffff;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+}
+
+.popup-detail {
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.6;
+}
+
+.popup-status {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.popup-status.active {
+  color: #34d399;
+}
+
+.popup-priority {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.popup-priority.emergency {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.popup-priority.high {
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.popup-priority.medium {
+  background: rgba(250, 204, 21, 0.12);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.2);
+}
+
+.popup-priority.low {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+/* ═══════════════════════════════════════════
+   Fleet Page — Glass Panels
+   ═══════════════════════════════════════════ */
+
+.fleet-glass-bar {
+  background: rgba(22, 25, 34, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.fleet-glass-panel {
+  background: rgba(15, 17, 23, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.fleet-stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+
+.fleet-rank-badge {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #facc15, #eab308);
+  color: white;
+  font-weight: 900;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════
+   Loaders
+   ═══════════════════════════════════════════ */
+
+.fleet-map-loader {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0c0c0c;
+  gap: 16px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mini-map-loader {
+  width: 100%;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #161616;
+  border-radius: 2rem;
+}
+
+.loader-pulse {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(250, 204, 21, 0.15);
+  animation: loader-beat 1.4s ease-in-out infinite;
+}
+
+@keyframes loader-beat {
+  0%, 100% { transform: scale(0.8); opacity: 0.4; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════
+   Scrollbar
+   ═══════════════════════════════════════════ */
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ═══════════════════════════════════════════
+   Create Job Modal Animation
+   ═══════════════════════════════════════════ */
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
