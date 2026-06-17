@@ -1,23 +1,17 @@
 'use client';
 
-<<<<<<< Updated upstream
-import React, { useState, useEffect } from 'react';
-=======
-import React from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
->>>>>>> Stashed changes
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
   Wrench, Users, Search, Bell, Plus,
-<<<<<<< Updated upstream
-  AlertCircle, Clock, Navigation, ChevronRight, LogOut
-=======
-  AlertCircle, Clock, Navigation, ChevronRight, Radio
->>>>>>> Stashed changes
+  AlertCircle, Clock, Navigation, ChevronRight, LogOut, Radio
 } from 'lucide-react';
 import FleetMap, { type Job } from '@/components/FleetMap';
+import CreateJobModal from '@/components/CreateJobModal';
+import CopilotPanel from '@/components/CopilotPanel';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -32,14 +26,7 @@ const MiniMapWidget = dynamic(() => import('@/components/MiniMapWidget'), {
   ),
 });
 
-const stats = [
-  { label: 'Total Jobs', value: 8, icon: Wrench, color: 'text-gray-400' },
-  { label: 'Pending', value: 4, icon: Clock, color: 'text-orange-400' },
-  { label: 'In Progress', value: 3, icon: Navigation, color: 'text-blue-400' },
-  { label: 'Emergencies', value: 2, icon: AlertCircle, color: 'text-red-500' },
-];
-
-const initialJobs: Job[] = [
+const SEED_JOBS: Job[] = [
   { id: '#8740BC', title: 'Sewer Leak - Basement', customer: 'Sarah Mitchell', address: '142 Oak Street, Suite 8', date: 'Mar 27, 2026', priority: 'EMERGENCY', status: 'Pending', color: 'border-l-red-500', lat: 45.523062, lng: -122.676482 },
   { id: '#8740BD', title: 'Water Heater Replacement', customer: 'James Rodriguez', address: '890 Pine Avenue, Apt 3', date: 'Mar 27, 2026', priority: 'HIGH', status: 'In Progress', color: 'border-l-orange-500', assigned: 'Mike Henderson', lat: 45.543062, lng: -122.656482 },
   { id: '#8740BE', title: 'Kitchen Faucet Install', customer: 'Emily Chen', address: '2450 Willow Creek Dr', date: 'Mar 28, 2026', priority: 'MEDIUM', status: 'Pending', color: 'border-l-blue-500', lat: 45.513062, lng: -122.686482 },
@@ -48,13 +35,116 @@ const initialJobs: Job[] = [
   { id: '#8740C1', title: 'Drain Cleaning - Main Line', customer: 'Robert Kim', address: '567 Cedar Blvd, Tigard', date: 'Mar 28, 2026', priority: 'HIGH', status: 'Pending', color: 'border-l-orange-500', lat: 45.433062, lng: -122.776482 },
 ];
 
+// Map a DB priority string to a display border color
+function priorityBorderColor(p: string): string {
+  const val = p.toUpperCase();
+  if (val === 'EMERGENCY') return 'border-l-red-500';
+  if (val === 'HIGH') return 'border-l-orange-500';
+  if (val === 'LOW') return 'border-l-green-500';
+  return 'border-l-blue-500';
+}
+
+// Map a DB status string to a display label
+function statusLabel(s: string): string {
+  if (s === 'in_progress') return 'In Progress';
+  if (s === 'completed') return 'Completed';
+  if (s === 'assigned') return 'Assigned';
+  return 'Pending';
+}
+
 export default function Dashboard() {
+  const [jobs, setJobs] = useState<Job[]>(SEED_JOBS);
   const [activeJob, setActiveJob] = useState<Job | null>(null);
   const [userProfile, setUserProfile] = useState<{ full_name?: string } | null>(null);
+  const [isCreateJobOpen, setIsCreateJobOpen] = useState(false);
   const router = useRouter();
+
+  // ── Fetch real jobs from Supabase on mount ──
+  useEffect(() => {
+    if (!supabase) return;
+    const sb = supabase; // local binding for TS narrowing
+
+    const fetchJobs = async () => {
+      const { data, error } = await sb
+        .from('jobs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const dbJobs: Job[] = data.map((j: Record<string, unknown>) => ({
+          id: j.id as string,
+          title: (j.title as string) || 'Untitled Job',
+          customer: (j.customer_name as string) || 'Unknown',
+          address: (j.address as string) || '',
+          date: (j.date as string) || new Date(j.created_at as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          priority: ((j.priority as string) || 'medium').toUpperCase(),
+          status: statusLabel((j.status as string) || 'pending'),
+          color: priorityBorderColor((j.priority as string) || 'medium'),
+          lat: (j.lat as number) || 45.5052,
+          lng: (j.lng as number) || -122.6784,
+          assigned: j.assigned_plumber_id ? 'Technician Assigned' : undefined,
+        }));
+        setJobs(dbJobs);
+      }
+    };
+
+    fetchJobs();
+
+    // ── Real-time subscription for new jobs ──
+    const channel = sb
+      .channel('dashboard-jobs')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'jobs' },
+        (payload) => {
+          const j = payload.new;
+          const newJob: Job = {
+            id: j.id,
+            title: j.title || 'Untitled Job',
+            customer: j.customer_name || 'Unknown',
+            address: j.address || '',
+            date: j.date || new Date(j.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            priority: (j.priority || 'medium').toUpperCase(),
+            status: statusLabel(j.status || 'pending'),
+            color: priorityBorderColor(j.priority || 'medium'),
+            lat: j.lat || 45.5052,
+            lng: j.lng || -122.6784,
+            assigned: j.assigned_plumber_id ? 'Technician Assigned' : undefined,
+          };
+          setJobs((prev) => [newJob, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      sb.removeChannel(channel);
+    };
+  }, []);
+
+  // ── Compute stats dynamically from jobs ──
+  const stats = useMemo(() => {
+    const total = jobs.length;
+    const pending = jobs.filter((j) => j.status === 'Pending').length;
+    const inProgress = jobs.filter((j) => j.status === 'In Progress' || j.status === 'Assigned').length;
+    const emergencies = jobs.filter((j) => j.priority === 'EMERGENCY').length;
+    return [
+      { label: 'Total Jobs', value: total, icon: Wrench, color: 'text-gray-400' },
+      { label: 'Pending', value: pending, icon: Clock, color: 'text-orange-400' },
+      { label: 'In Progress', value: inProgress, icon: Navigation, color: 'text-blue-400' },
+      { label: 'Emergencies', value: emergencies, icon: AlertCircle, color: 'text-red-500' },
+    ];
+  }, [jobs]);
+
+  // ── Callback when a new job is created via modal ──
+  const handleJobCreated = useCallback(() => {
+    // Real-time subscription will auto-add the job to the list.
+    // router.refresh() ensures any server-rendered data also updates.
+    router.refresh();
+  }, [router]);
 
   useEffect(() => {
     const fetchProfile = async () => {
+      if (!supabase) return;
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
@@ -70,6 +160,7 @@ export default function Dashboard() {
   }, []);
 
   const handleLogout = async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
     router.push('/login');
     router.refresh();
@@ -122,7 +213,11 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <button className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 font-bold transition-all shadow-lg shadow-blue-600/20">
+          <button
+            id="new-job-button"
+            onClick={() => setIsCreateJobOpen(true)}
+            className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 font-bold transition-all shadow-lg shadow-blue-600/20"
+          >
             <Plus size={20} /> New Job
           </button>
         </div>
@@ -169,12 +264,19 @@ export default function Dashboard() {
               </div>
             </div>
 
-<<<<<<< Updated upstream
             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 mb-12">
-              {initialJobs.map((job, i) => (
+              {jobs.map((job, i) => (
                 <div
                   key={i}
-                  onClick={() => setActiveJob(job)}
+                  onClick={() => {
+                    // Real DB jobs (UUIDs) → navigate to details page
+                    // Seed/mock jobs (starting with #) → select on map
+                    if (!job.id.startsWith('#')) {
+                      router.push(`/jobs/${job.id}`);
+                    } else {
+                      setActiveJob(job);
+                    }
+                  }}
                   className={cn(
                     "bg-[#161922] p-6 rounded-[2rem] border-l-[6px] border-t border-r border-b border-gray-800/40 hover:bg-[#1c202b] transition-all cursor-pointer group hover:shadow-2xl hover:shadow-black/40",
                     job.color,
@@ -188,21 +290,6 @@ export default function Dashboard() {
                         <div className="text-[10px] text-gray-600 font-medium italic">{job.date}</div>
                       </div>
                    </div>
-=======
-            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
-              {jobs.map((job, i) => (
-                <div key={i} className={cn(
-                  "bg-[#161922] p-6 rounded-[2rem] border-l-[6px] border-t border-r border-b border-gray-800/40 hover:bg-[#1c202b] transition-all cursor-pointer group hover:shadow-2xl hover:shadow-black/40",
-                  job.color
-                )}>
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="p-3 bg-[#1f232d] rounded-2xl text-gray-400 group-hover:text-blue-400 transition-colors"><Wrench size={20} /></div>
-                    <div className="text-right">
-                      <div className="text-gray-500 text-[10px] font-black uppercase tracking-widest leading-none mb-1">ID {job.id}</div>
-                      <div className="text-[10px] text-gray-600 font-medium italic">{job.date}</div>
-                    </div>
-                  </div>
->>>>>>> Stashed changes
 
                   <h3 className="font-black text-xl mb-2 group-hover:text-blue-50 text-white transition-colors">{job.title}</h3>
 
@@ -292,6 +379,16 @@ export default function Dashboard() {
           </aside>
         </div>
       </main>
+
+      {/* ═══ Create Job Modal ═══ */}
+      <CreateJobModal
+        isOpen={isCreateJobOpen}
+        onClose={() => setIsCreateJobOpen(false)}
+        onJobCreated={handleJobCreated}
+      />
+
+      {/* ═══ Agentic Dispatch Copilot ═══ */}
+      <CopilotPanel />
     </div>
   );
 }
