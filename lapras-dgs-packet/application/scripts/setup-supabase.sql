@@ -90,11 +90,11 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs; EXCEPTION
 --    role CHECK: ('admin','plumber')
 --    status CHECK: ('active','busy','offline')
 -- ─────────────────────────────────────────────────────────────
-INSERT INTO public.profiles (id, full_name, role, status, current_location, phone, specialty)
-VALUES
-  (gen_random_uuid(), 'Tony Russo',  'plumber', 'active', '{"lat":45.4210,"lng":-122.6710}'::jsonb, '(503) 555-0103', 'Drain Cleaning'),
-  (gen_random_uuid(), 'Alex Rivera', 'plumber', 'active', '{"lat":45.4875,"lng":-122.8040}'::jsonb, '(503) 555-0104', 'Pipe Fitting'),
-  (gen_random_uuid(), 'Jake Morris', 'plumber', 'active', '{"lat":45.5320,"lng":-122.7100}'::jsonb, '(503) 555-0105', 'Residential');
+-- Uses seed_demo_plumber (defined in 0000_base_schema.sql) so each profile
+-- gets a backing auth.users row first — profiles.id → auth.users(id) FK.
+SELECT public.seed_demo_plumber('Tony Russo',  '{"lat":45.4210,"lng":-122.6710}'::jsonb, '(503) 555-0103', 'Drain Cleaning');
+SELECT public.seed_demo_plumber('Alex Rivera', '{"lat":45.4875,"lng":-122.8040}'::jsonb, '(503) 555-0104', 'Pipe Fitting');
+SELECT public.seed_demo_plumber('Jake Morris', '{"lat":45.5320,"lng":-122.7100}'::jsonb, '(503) 555-0105', 'Residential');
 
 -- Update existing plumbers with map data
 UPDATE public.profiles SET

@@ -154,11 +154,11 @@ Minor diffs: shorter `SYSTEM_PROMPT`; if model returns read + write tools in one
 
 | Ambiguity | Which doc | Impact | Patch applied? |
 |---|---|---|---|
-| `middleware.ts` not in §A.2 folder tree | 03-guide §A.2 | Gemini omitted auth middleware | ☐ |
-| Realtime setup pattern not explicit enough | SETUP.md, 03-guide | Gemini used destructive `DROP PUBLICATION` | ☐ |
-| Extension choice (`pgcrypto` vs `postgis`) | 03-guide §A.4 | Gemini added PostGIS unnecessarily | ☐ |
-| Unit test files not listed in folder tree | 03-guide §A.2 | Gemini omitted all 4 test files | ☐ |
-| `jobs.address` column easy to miss | 03-guide §A.4 | Omitted from Gemini's jobs DDL | ☐ |
+| `middleware.ts` not in §A.2 folder tree | 03-guide §A.2 | Gemini omitted auth middleware | ☑ |
+| Realtime setup pattern not explicit enough | SETUP.md, 03-guide | Gemini used destructive `DROP PUBLICATION` | ☑ |
+| Extension choice (`pgcrypto` vs `postgis`) | 03-guide §A.4 | Gemini added PostGIS unnecessarily | ☑ |
+| Unit test files not listed in folder tree | 03-guide §A.2 | Gemini omitted all 4 test files | ☑ |
+| `jobs.address` column easy to miss | 03-guide §A.4 | Omitted from Gemini's jobs DDL | ☑ |
 
 ---
 
@@ -173,14 +173,15 @@ Minor diffs: shorter `SYSTEM_PROMPT`; if model returns read + write tools in one
 | 2026-06-17 | `SETUP.md` | Realtime publication warning; `pgcrypto` not `postgis` |
 | 2026-06-17 | `lapras-dgs-packet/README.md` | Submission checklist + zip command |
 | 2026-06-17 | `application/` | Cleaned: removed `.env.local`, junk files; synced from PNUM |
+| 2026-06-18 | `scripts/0000_base_schema.sql`, `scripts/setup-supabase.sql` | **FK seed fix:** seeded `profiles` with `gen_random_uuid()` while `profiles.id` references `auth.users(id)` — fails on a fresh project. Added `seed_demo_plumber()` helper (creates the `auth.users` row first via the `handle_new_user` trigger, then promotes the profile). Verified against the live schema in a rolled-back transaction. |
 
-### Recommended follow-up patches (from Gemini test)
+### Follow-up patches from the Gemini test — all applied ✅
 
-1. Add `middleware.ts` to §A.2 folder tree
-2. Add explicit warning in SETUP.md: **never `DROP PUBLICATION supabase_realtime`** — use `ALTER PUBLICATION … ADD TABLE` with exception handler
-3. State clearly: use `pgcrypto` extension, not `postgis`
-4. List `lib/*.test.ts` files in folder tree
-5. Highlight `jobs.address` column in jobs table definition
+1. ☑ Added `middleware.ts` to §A.2 folder tree
+2. ☑ Added SETUP.md warning: **never `DROP PUBLICATION supabase_realtime`** — use `ALTER PUBLICATION … ADD TABLE` with an exception handler
+3. ☑ Stated use of `pgcrypto` extension, not `postgis`
+4. ☑ Listed `lib/*.test.ts` files in the folder tree
+5. ☑ Highlighted the `jobs.address` column in the jobs table definition
 
 ---
 
