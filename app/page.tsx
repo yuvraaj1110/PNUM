@@ -12,6 +12,7 @@ import {
 import FleetMap, { type Job } from '@/components/FleetMap';
 import CreateJobModal from '@/components/CreateJobModal';
 import CopilotPanel from '@/components/CopilotPanel';
+import ActivityFeed from '@/components/ActivityFeed';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -22,7 +23,7 @@ function cn(...inputs: ClassValue[]) {
 const MiniMapWidget = dynamic(() => import('@/components/MiniMapWidget'), {
   ssr: false,
   loading: () => (
-    <div className="h-[280px] rounded-[2rem] bg-[#161922] border border-gray-800/50 animate-pulse" />
+    <div className="h-[280px] rounded-[2rem] bg-[#161616] border border-gray-800/50 animate-pulse" />
   ),
 });
 
@@ -130,7 +131,7 @@ export default function Dashboard() {
     return [
       { label: 'Total Jobs', value: total, icon: Wrench, color: 'text-gray-400' },
       { label: 'Pending', value: pending, icon: Clock, color: 'text-orange-400' },
-      { label: 'In Progress', value: inProgress, icon: Navigation, color: 'text-blue-400' },
+      { label: 'In Progress', value: inProgress, icon: Navigation, color: 'text-yellow-400' },
       { label: 'Emergencies', value: emergencies, icon: AlertCircle, color: 'text-red-500' },
     ];
   }, [jobs]);
@@ -167,36 +168,36 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1117] text-gray-100 font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-[#0c0c0c] text-gray-100 font-sans selection:bg-yellow-500/30">
       {/* Top Navigation */}
-      <nav className="flex items-center justify-between px-6 py-3 bg-[#161922] border-b border-gray-800 sticky top-0 z-50">
+      <nav className="flex items-center justify-between px-6 py-3 bg-[#161616] border-b border-gray-800 sticky top-0 z-50">
         <div className="flex items-center gap-10">
-          <div className="flex items-center gap-2 text-blue-400 font-bold text-2xl tracking-tighter italic">
-            <div className="p-1.5 bg-blue-600 rounded-lg text-white shadow-lg shadow-blue-500/20"><Wrench size={22} /></div>
+          <div className="flex items-center gap-2 text-yellow-400 font-bold text-2xl tracking-tighter italic">
+            <div className="p-1.5 bg-yellow-400 rounded-lg text-black shadow-lg shadow-yellow-500/20"><Wrench size={22} /></div>
             Lapras
           </div>
           <div className="flex gap-8 text-sm font-medium text-gray-400">
-            <Link href="/fleet" className="flex items-center gap-2 text-white cursor-pointer hover:text-blue-400 transition-all group">
+            <Link href="/fleet" className="flex items-center gap-2 text-white cursor-pointer hover:text-yellow-400 transition-all group">
               <Radio size={18} className="group-hover:scale-110 transition-transform" />
               Live Fleet
-              <span className="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full text-[10px]">4 Online</span>
+              <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full text-[10px]">4 Online</span>
             </Link>
             <span className="cursor-pointer hover:text-white transition-colors">Customers</span>
-            <span className="cursor-pointer hover:text-white transition-colors">Analytics</span>
+            <Link href="/analytics" className="cursor-pointer hover:text-white transition-colors">Analytics</Link>
           </div>
         </div>
 
         <div className="flex items-center gap-6">
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-400 transition-colors" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-yellow-400 transition-colors" size={16} />
             <input
               placeholder="Search active jobs..."
-              className="bg-[#1f232d] border border-transparent focus:border-blue-500/50 outline-none rounded-xl py-2.5 pl-10 pr-4 text-sm w-72 transition-all placeholder:text-gray-600"
+              className="bg-[#1f1f1f] border border-transparent focus:border-yellow-500/50 outline-none rounded-xl py-2.5 pl-10 pr-4 text-sm w-72 transition-all placeholder:text-gray-600"
             />
           </div>
-          <div className="p-2.5 bg-[#1f232d] rounded-xl text-gray-400 cursor-pointer hover:text-white hover:bg-[#2a2f3a] transition-all relative">
+          <div className="p-2.5 bg-[#1f1f1f] rounded-xl text-gray-400 cursor-pointer hover:text-white hover:bg-[#2a2a2a] transition-all relative">
             <Bell size={20} />
-            <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#1f232d]"></div>
+            <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#1f1f1f]"></div>
           </div>
 
           <div className="flex items-center gap-4 pl-4 border-l border-gray-800">
@@ -216,7 +217,7 @@ export default function Dashboard() {
           <button
             id="new-job-button"
             onClick={() => setIsCreateJobOpen(true)}
-            className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 font-bold transition-all shadow-lg shadow-blue-600/20"
+            className="bg-yellow-400 hover:bg-yellow-300 active:scale-95 text-black px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 font-bold transition-all shadow-lg shadow-yellow-500/20"
           >
             <Plus size={20} /> New Job
           </button>
@@ -227,9 +228,9 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {stats.map((stat, i) => (
-            <div key={i} className="bg-[#161922] p-6 rounded-3xl border border-gray-800/50 hover:border-gray-700 transition-colors flex items-center gap-6 group">
+            <div key={i} className="bg-[#161616] p-6 rounded-3xl border border-gray-800/50 hover:border-gray-700 transition-colors flex items-center gap-6 group">
               <div className={cn(
-                "p-4 rounded-2xl bg-[#1f232d] group-hover:scale-110 transition-transform bg-opacity-10",
+                "p-4 rounded-2xl bg-[#1f1f1f] group-hover:scale-110 transition-transform bg-opacity-10",
                 stat.color
               )}>
                 <stat.icon size={32} />
@@ -255,9 +256,9 @@ export default function Dashboard() {
                 <h2 className="text-2xl font-bold tracking-tight">Active Job Board</h2>
                 <p className="text-gray-500 text-sm mt-1">Real-time status of all field operations</p>
               </div>
-              <div className="flex gap-2 p-1 bg-[#161922] rounded-xl border border-gray-800">
+              <div className="flex gap-2 p-1 bg-[#161616] rounded-xl border border-gray-800">
                 {['All', 'Pending', 'Active'].map(tab => (
-                  <button key={tab} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${tab === 'All' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-white'}`}>
+                  <button key={tab} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${tab === 'All' ? 'bg-yellow-400 text-black shadow-md' : 'text-gray-500 hover:text-white'}`}>
                     {tab}
                   </button>
                 ))}
@@ -278,24 +279,24 @@ export default function Dashboard() {
                     }
                   }}
                   className={cn(
-                    "bg-[#161922] p-6 rounded-[2rem] border-l-[6px] border-t border-r border-b border-gray-800/40 hover:bg-[#1c202b] transition-all cursor-pointer group hover:shadow-2xl hover:shadow-black/40",
+                    "bg-[#161616] p-6 rounded-[2rem] border-l-[6px] border-t border-r border-b border-gray-800/40 hover:bg-[#1e1e1e] transition-all cursor-pointer group hover:shadow-2xl hover:shadow-black/40",
                     job.color,
-                    activeJob?.id === job.id && "ring-2 ring-blue-500/50 bg-[#1c202b]"
+                    activeJob?.id === job.id && "ring-2 ring-yellow-500/50 bg-[#1e1e1e]"
                   )}
                 >
                    <div className="flex justify-between items-start mb-6">
-                      <div className="p-3 bg-[#1f232d] rounded-2xl text-gray-400 group-hover:text-blue-400 transition-colors"><Wrench size={20}/></div>
+                      <div className="p-3 bg-[#1f1f1f] rounded-2xl text-gray-400 group-hover:text-yellow-400 transition-colors"><Wrench size={20}/></div>
                       <div className="text-right">
                         <div className="text-gray-500 text-[10px] font-black uppercase tracking-widest leading-none mb-1">ID {job.id}</div>
                         <div className="text-[10px] text-gray-600 font-medium italic">{job.date}</div>
                       </div>
                    </div>
 
-                  <h3 className="font-black text-xl mb-2 group-hover:text-blue-50 text-white transition-colors">{job.title}</h3>
+                  <h3 className="font-black text-xl mb-2 group-hover:text-yellow-50 text-white transition-colors">{job.title}</h3>
 
                   <div className="space-y-2 mb-6">
                     <div className="flex items-center gap-2 text-sm text-gray-300 font-medium">
-                      <Users size={14} className="text-blue-500/50" /> {job.customer}
+                      <Users size={14} className="text-yellow-500/50" /> {job.customer}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Navigation size={14} className="opacity-30" /> {job.address}
@@ -307,14 +308,14 @@ export default function Dashboard() {
                       "text-[10px] font-black px-3 py-1.5 rounded-full tracking-wider",
                       job.priority === 'EMERGENCY' && 'bg-red-500/10 text-red-500 border border-red-500/20',
                       job.priority === 'HIGH' && 'bg-orange-500/10 text-orange-500 border border-orange-500/20',
-                      job.priority !== 'EMERGENCY' && job.priority !== 'HIGH' && 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                      job.priority !== 'EMERGENCY' && job.priority !== 'HIGH' && 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
                     )}>
                       {job.priority}
                     </span>
                     <div className="flex items-center gap-2 group/status">
                       <div className={cn(
                         "w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]",
-                        job.status === 'In Progress' ? 'bg-blue-400 animate-pulse' :
+                        job.status === 'In Progress' ? 'bg-yellow-400 animate-pulse' :
                           job.status === 'Completed' ? 'bg-green-500' : 'bg-orange-400'
                       )}></div>
                       <span className="text-[11px] font-bold text-gray-300 group-hover/status:text-white transition-colors">{job.status}</span>
@@ -323,9 +324,9 @@ export default function Dashboard() {
                   </div>
 
                   {job.assigned && (
-                    <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-blue-500/5 rounded-xl border border-blue-500/10">
-                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
-                      <span className="text-[10px] text-blue-400 font-bold uppercase tracking-tight">Assigned: {job.assigned}</span>
+                    <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-yellow-500/5 rounded-xl border border-yellow-500/10">
+                      <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
+                      <span className="text-[10px] text-yellow-400 font-bold uppercase tracking-tight">Assigned: {job.assigned}</span>
                     </div>
                   )}
                 </div>
@@ -340,42 +341,23 @@ export default function Dashboard() {
           </div>
 
           {/* Activity Feed Sidebar */}
-          <aside className="w-full lg:w-96 bg-[#161922] p-8 rounded-[2.5rem] border border-gray-800/50 self-start shadow-xl">
+          <aside className="w-full lg:w-96 bg-[#161616] p-8 rounded-[2.5rem] border border-gray-800/50 self-start shadow-xl">
             <div className="flex justify-between items-center mb-10">
               <h3 className="font-black text-lg flex items-center gap-3">
-                <div className="p-2 bg-blue-500/10 rounded-lg"><Navigation size={18} className="text-blue-400" /></div>
+                <div className="p-2 bg-yellow-500/10 rounded-lg"><Navigation size={18} className="text-yellow-400" /></div>
                 Activity Feed
               </h3>
               <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
             </div>
 
-            <div className="space-y-8 relative before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gray-800/50">
-              {[
-                { name: 'Carlos Vega', action: 'arrived at', job: 'Pipe Burst - Emer...', time: '14 min ago', color: 'bg-green-500' },
-                { name: 'Mike Henderson', action: 'started job', job: 'Water Heater Rep...', time: '42 min ago', color: 'bg-blue-500' },
-                { name: 'System', action: 'auto-matched', job: 'Sewer Leak - Base...', time: '1 hr ago', color: 'bg-purple-500' },
-                { name: 'Tony Russo', action: 'completed', job: 'Toilet Repair', time: '2 hr ago', color: 'bg-green-500' },
-                { name: 'Gas leak', action: 'reported at', job: '445 Birch Court', time: '3 hr ago', color: 'bg-red-500' },
-              ].map((activity, i) => (
-                <div key={i} className="flex gap-6 items-start relative z-10 group">
-                  <div className={`mt-1.5 w-3.5 h-3.5 rounded-full border-[3px] border-[#161922] shadow-sm shrink-0 transition-transform group-hover:scale-125 ${activity.color}`}></div>
-                  <div className="flex-1">
-                    <div className="text-sm leading-relaxed">
-                      <span className="font-black text-white">{activity.name}</span>
-                      <span className="text-gray-500 mx-1.5">{activity.action}</span>
-                      <span className="text-blue-400 font-bold hover:underline cursor-pointer">{activity.job}</span>
-                    </div>
-                    <div className="text-[10px] text-gray-600 font-bold mt-1.5 uppercase tracking-widest flex items-center gap-1.5">
-                      <Clock size={10} /> {activity.time}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ActivityFeed />
 
-            <button className="w-full mt-12 py-4 bg-[#1f232d] hover:bg-[#252a36] text-gray-400 hover:text-white text-xs font-black uppercase tracking-widest rounded-2xl border border-gray-800 transition-all">
-              View Full Audit Log
-            </button>
+            <Link
+              href="/analytics"
+              className="mt-12 w-full flex items-center justify-center py-4 bg-[#1f1f1f] hover:bg-[#252525] text-gray-400 hover:text-white text-xs font-black uppercase tracking-widest rounded-2xl border border-gray-800 transition-all"
+            >
+              View Operations Analytics
+            </Link>
           </aside>
         </div>
       </main>

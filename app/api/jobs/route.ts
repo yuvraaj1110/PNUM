@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { pickSupabaseKey } from '@/lib/supabase-key';
+import { logJobEvent } from '@/lib/audit';
 
 /**
  * Server-side API route for creating jobs.
@@ -98,6 +99,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Audit: job created
+    await logJobEvent(supabase, {
+      jobId: jobData!.id,
+      actor: 'dispatcher',
+      eventType: 'created',
+      payload: { title: jobTitle.trim(), priority: priority || 'medium', customer_name: customerName.trim() },
+    });
+
     // Step 4: If "Assign Now", mark plumber as busy
     if (assignMode === 'now' && selectedPlumberId) {
       const { error: plumberError } = await supabase
@@ -114,6 +123,14 @@ export async function POST(request: NextRequest) {
           { status: 207 }
         );
       }
+
+      // Audit: assigned at creation time
+      await logJobEvent(supabase, {
+        jobId: jobData!.id,
+        actor: 'dispatcher',
+        eventType: 'assigned',
+        payload: { technician_id: selectedPlumberId },
+      });
     }
 
     return NextResponse.json(

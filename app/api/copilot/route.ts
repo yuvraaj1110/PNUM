@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
 
     // ── Agentic loop ──
     for (let turn = 0; turn < MAX_TURNS; turn++) {
-      const completion = await client.chat.completions.create({
+      const completion = await createCompletion(client, {
         model,
         temperature: 0.2,
         tools: LLM_TOOLS,
@@ -199,8 +199,51 @@ export async function POST(request: NextRequest) {
       done: true,
     });
   } catch (err) {
+    // Groq occasionally rejects the model's tool-call generation
+    // (code "tool_use_failed" / "failed_generation"). If retries didn't clear
+    // it, return a friendly message instead of the raw 400.
+    if (isToolUseFailed(err)) {
+      return NextResponse.json({
+        messages,
+        reply: "I had trouble forming that request just now — please ask again (e.g. \"list pending jobs\" or \"who's nearest to the emergency?\").",
+        done: true,
+      });
+    }
     const message = err instanceof Error ? err.message : 'Unexpected copilot error';
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/** Detect Groq's stochastic tool-call generation failure. */
+function isToolUseFailed(err: unknown): boolean {
+  const e = err as { status?: number; error?: { code?: string; message?: string; failed_generation?: string } };
+  if (e?.status !== 400) return false;
+  const body = e.error ?? {};
+  return (
+    body.code === 'tool_use_failed' ||
+    'failed_generation' in body ||
+    /failed to call a function/i.test(body.message ?? '')
+  );
+}
+
+/**
+ * Run a chat completion, retrying up to twice when Groq rejects the model's
+ * tool-call generation. The failure is stochastic, so a retry (with a small
+ * temperature nudge to resample) almost always clears it.
+ */
+async function createCompletion(
+  client: OpenAI,
+  params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+  attempt = 0
+): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  try {
+    return await client.chat.completions.create(params);
+  } catch (err) {
+    if (isToolUseFailed(err) && attempt < 2) {
+      const bumped = Math.min(0.7, (params.temperature ?? 0.2) + 0.25);
+      return createCompletion(client, { ...params, temperature: bumped }, attempt + 1);
+    }
+    throw err;
   }
 }
 
