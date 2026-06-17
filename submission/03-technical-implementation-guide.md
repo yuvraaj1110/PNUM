@@ -316,3 +316,221 @@ FROM public.v_job_response_times r;
 
 Migration `0004` grants `SELECT` on all three views to `anon` and
 `authenticated` so the analytics page can read them under RLS.
+
+---
+
+# Part B — API and MCP Layer
+
+All server routes build a Supabase client with `pickSupabaseKey(serviceKey,
+anonKey)` (`lib/supabase-key.ts`): prefer the service-role key **only if it is a
+real key** (length ≥ 40 — guards against the `.env.example` placeholder), else
+fall back to the anon key. Clients are created with
+`{ auth: { autoRefreshToken: false, persistSession: false } }`.
+
+## B.1 `POST /api/jobs` — create a job
+
+Source: `app/api/jobs/route.ts`.
+
+**Request body:**
+
+```jsonc
+{
+  "customerName": "string (required)",
+  "address": "string (required)",
+  "jobTitle": "string (required)",
+  "description": "string?",
+  "priority": "low|medium|high|emergency (default 'medium')",
+  "assignMode": "'now' | other",      // 'now' assigns immediately
+  "selectedPlumberId": "uuid?"         // used when assignMode === 'now'
+}
+```
+
+**Steps:**
+1. Validate `customerName`, `address`, `jobTitle` are non-empty → else **400**.
+2. `supabase.rpc('create_customer', { p_name, p_address })` → returns
+   `customerId`. On error → **500** `Customer creation failed`.
+3. Generate Portland-area coordinates:
+   `lat = 45.5052 + (rand-0.5)*0.06`, `lng = -122.6784 + (rand-0.5)*0.1`.
+4. Insert into `jobs`: `customer_id`, `customer_name`, `title`, `description`,
+   `address`, `priority`, `status` = `assignMode==='now' ? 'assigned' :
+   'pending'`, `assigned_plumber_id` = `assignMode==='now' ? selectedPlumberId :
+   null`, `lat`, `lng`, `date` (localized `en-US` short date). On error → **500**.
+5. `logJobEvent(actor='dispatcher', eventType='created', payload={title,
+   priority, customer_name})`.
+6. If `assignMode==='now' && selectedPlumberId`: set that plumber's `status` to
+   `busy`. If that update fails → **207** `{ error, jobId }`. On success, log a
+   second event `eventType='assigned', payload={technician_id}`.
+
+**Responses:** **201** `{ success: true, jobId }` · **207** (job created but
+plumber update failed) · **400** (missing fields) · **500** (RPC/insert error).
+
+## B.2 `PATCH /api/jobs/[id]` — update job status
+
+Source: `app/api/jobs/[id]/route.ts`. `params` is a `Promise` (Next 15) — awaited.
+
+**Request body:** `{ "status": "pending|assigned|in_progress|completed|cancelled" }`
+(validated against that set).
+
+**Steps:**
+1. Invalid JSON → **400** `Invalid JSON body`. Missing/invalid `status` → **400**.
+2. Read current `jobs` row (`status`, `assigned_plumber_id`). Not found → **404**
+   `Job not found`.
+3. `UPDATE jobs SET status=… WHERE id`. On error → **500**.
+4. If new status is `completed` or `cancelled` **and** a tech is assigned: free
+   the tech (`profiles.status → 'active'`).
+5. `logJobEvent` with `eventType` = `completed` / `cancelled` /
+   `status_changed` (by status), `payload = { from: current.status, to: status }`.
+
+**Responses:** **200** `{ success: true, id, status }` · **400** · **404** · **500**.
+
+## B.3 `POST /api/copilot` — agentic dispatch copilot
+
+Source: `app/api/copilot/route.ts`. Uses the **OpenAI-compatible Chat
+Completions API** (`openai` SDK), provider-switched by `LLM_PROVIDER`.
+
+> Note: a code comment in the route/tool files says "Anthropic tool-calling," but
+> the actual implementation is the OpenAI-compatible Chat Completions interface
+> (Groq / Ollama / OpenAI). This guide documents the real implementation.
+
+**Provider resolution** (`resolveLLM`):
+- `ollama` → `baseURL http://localhost:11434/v1`, key `'ollama'`, default model
+  `llama3.1:8b`.
+- `openai` → `OPENAI_API_KEY` + `OPENAI_BASE_URL`, default model `gpt-4o-mini`.
+- default `groq` → `baseURL https://api.groq.com/openai/v1`, `GROQ_API_KEY`,
+  default model `llama-3.3-70b-versatile`.
+- `COPILOT_MODEL` overrides the default for any provider.
+
+If provider is `groq` and `GROQ_API_KEY` is unset → **500** with a helpful
+message.
+
+**Wire protocol** (stateless; the client holds the full transcript):
+
+```jsonc
+// Request
+{ "messages": ChatMessage[], "confirm"?: { "approve": boolean } }
+// Response
+{ "messages": ChatMessage[], "reply": string,
+  "pendingConfirmation"?: { "tool": string, "input": object },
+  "done": boolean }
+```
+
+**Tool-calling loop:**
+- A fixed `SYSTEM_PROMPT` frames the assistant as the Portland fleet dispatch
+  copilot. The shared `FLEET_TOOLS` catalog is mapped to OpenAI function-tool
+  format (`type:'function'`, `function:{name,description,parameters:inputSchema}`).
+- Loop up to `MAX_TURNS = 8` with `temperature 0.2`, `tool_choice:'auto'`,
+  `messages: [system, ...transcript]`.
+- If the model returns **no tool calls** → respond `{ messages, reply:
+  content, done: true }`.
+- **Confirm gate:** `WRITE_TOOLS = { 'assign_job' }`. If the model wants to call
+  `assign_job`, the route stops and returns `pendingConfirmation:
+  { tool:'assign_job', input }` with `done:false` — it does **not** execute the
+  write. The dispatcher must approve.
+- Read-only tools auto-execute (`runTool` → `executeTool`) and the loop
+  continues; each tool result is pushed as a `role:'tool'` message.
+
+**Resume path (`confirm`):** when the request carries `confirm`, the last
+assistant message's `assign_job` tool call is either executed (`approve:true`) or
+answered with a "dispatcher declined" tool message (`approve:false`), then the
+loop resumes. If `confirm` is sent without a trailing assistant tool-call
+message → **400**.
+
+**Groq `tool_use_failed` retry:** Groq occasionally rejects the model's
+tool-call generation (HTTP 400, `code:'tool_use_failed'` /
+`failed_generation`). `createCompletion` retries up to **twice**, bumping
+`temperature` by `+0.25` (capped at `0.7`) to resample. If it still fails, the
+route returns a friendly `done:true` message instead of a raw 400.
+
+## B.4 `GET /auth/callback` — PKCE session exchange
+
+Source: `app/auth/callback/route.ts`. Reads `code` and `next` (default `/`) from
+the URL. With `@supabase/ssr` `createServerClient` (using
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` + cookie store), calls
+`supabase.auth.exchangeCodeForSession(code)`. On success → redirect to `next`;
+on failure → redirect to `/login?error=auth-callback-failed`.
+
+## B.5 Realtime channels
+
+Supabase Realtime `postgres_changes` subscriptions:
+
+| Channel | Source | Table(s) / event | Handler behavior |
+|---|---|---|---|
+| `fleet-map` | `hooks/useFleetSubscription.ts` | `profiles` UPDATE; `jobs` `*` | Patch tech marker location/status on UPDATE; INSERT/UPDATE/DELETE jobs into local state. |
+| `dashboard-jobs` | `app/page.tsx` | `jobs` INSERT | Prepend the new job card to the board. |
+| `activity-feed` | `components/ActivityFeed.tsx` | `job_events` INSERT | Re-fetch the latest 12 events (with joined job title). |
+| `analytics` | `app/analytics/page.tsx` | `jobs` `*`, `assignments` `*`, `job_events` `*` | Re-run the KPI/view loader on any change. |
+
+## B.6 MCP tool catalog
+
+Source: `lib/fleet-tools.ts` (catalog + `executeTool` dispatcher), backed by
+`lib/fleet-ops.ts`. The **same catalog** drives both the MCP server and the
+copilot route, so the two surfaces never drift.
+
+Each tool's `inputSchema` is JSON Schema with `type:'object'`,
+`additionalProperties:false`.
+
+### `get_fleet_status`
+- **Input:** `{}` (no properties).
+- **Output:** array of `{ id, name, status, specialty, phone, location:{lat,lng},
+  activeLoad }` for all `role IN ('plumber','technician')`. `activeLoad` = count
+  of that tech's `assignments` with `status='active'`.
+- **Side effects:** none (read).
+
+### `list_jobs`
+- **Input:** `{ status?: 'pending'|'assigned'|'in_progress'|'completed',
+  priority?: 'emergency'|'high'|'medium'|'low' }`.
+- **Output:** jobs (`id,title,status,priority,customer_name,address,lat,lng,
+  created_at`), newest first, filtered by the given fields.
+- **Side effects:** none (read).
+
+### `find_nearest_available_tech`
+- **Input:** `{ job_id: string (required), top_n?: integer 1..10 (default 3) }`.
+- **Output:** `{ job, requiredSkill, candidates: RankedCandidate[] }` — ranked
+  active technicians with `score` and `breakdown`. **Does NOT assign.**
+- **Side effects:** none (read). This is the assignment algorithm (see Part C).
+
+### `assign_job`
+- **Input:** `{ job_id: string (required), technician_id: string (required),
+  assigned_by?: string }`.
+- **Output:** `{ assignmentId, jobId, technicianId, technicianName, score,
+  distanceKm }`.
+- **Side effects (WRITE):** recomputes the score for an auditable record, inserts
+  an `assignments` row (`status='active'`, `score`, `distance_km`,
+  `assigned_by`), sets the job to `assigned` with `assigned_plumber_id`, marks
+  the technician `busy`, and appends a `job_events` `assigned` row. **Gated by
+  the copilot confirm step.** (`assigned_by` defaults to `copilot` when called
+  via the copilot dispatcher.)
+
+### `get_job_history`
+- **Input:** `{ technician_id?: string, customer_id?: string, limit?: integer
+  1..100 }`.
+- **Output:** past jobs for a technician (joined via `assignments`) or a customer
+  (`customer_id` filter), newest first, default limit 20.
+- **Side effects:** none (read).
+
+### Running and wiring the MCP server
+
+Source: `mcp-server/index.ts`. Loads `.env.local` via `dotenv`, builds a
+Supabase client (service-role key preferred, anon fallback), and registers a
+`@modelcontextprotocol/sdk` `Server` (`name:'lapras-fleet'`, `version:'1.0.0'`,
+`capabilities:{ tools:{} }`) over **stdio** (`StdioServerTransport`). It handles
+`ListToolsRequestSchema` (returns the `FLEET_TOOLS` catalog) and
+`CallToolRequestSchema` (runs `executeTool`, returns the result as
+`content:[{type:'text', text: JSON}]`; errors return `isError:true`).
+
+Run: `npm run mcp`. Sample Claude Desktop config (`mcpServers`):
+
+```jsonc
+{
+  "mcpServers": {
+    "lapras-fleet": {
+      "command": "npx",
+      "args": ["tsx", "mcp-server/index.ts"],
+      "env": {
+        "NEXT_PUBLIC_SUPABASE_URL": "https://xxx.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "eyJ..."
+      }
+    }
+  }
+}
+```
