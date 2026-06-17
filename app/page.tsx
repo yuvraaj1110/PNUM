@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
   Wrench, Users, Search, Bell, Plus,
-  AlertCircle, Clock, Navigation, ChevronRight, LogOut, Radio
+  Navigation, ChevronRight, LogOut, Radio
 } from 'lucide-react';
 import FleetMap, { type Job } from '@/components/FleetMap';
 import CreateJobModal from '@/components/CreateJobModal';
@@ -23,7 +23,7 @@ function cn(...inputs: ClassValue[]) {
 const MiniMapWidget = dynamic(() => import('@/components/MiniMapWidget'), {
   ssr: false,
   loading: () => (
-    <div className="h-[280px] rounded-[2rem] bg-[#161616] border border-gray-800/50 animate-pulse" />
+    <div className="h-[560px] rounded-[2rem] bg-[#161616] border border-gray-800/50 animate-pulse" />
   ),
 });
 
@@ -122,19 +122,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  // ── Compute stats dynamically from jobs ──
-  const stats = useMemo(() => {
-    const total = jobs.length;
-    const pending = jobs.filter((j) => j.status === 'Pending').length;
-    const inProgress = jobs.filter((j) => j.status === 'In Progress' || j.status === 'Assigned').length;
-    const emergencies = jobs.filter((j) => j.priority === 'EMERGENCY').length;
-    return [
-      { label: 'Total Jobs', value: total, icon: Wrench, color: 'text-gray-400' },
-      { label: 'Pending', value: pending, icon: Clock, color: 'text-orange-400' },
-      { label: 'In Progress', value: inProgress, icon: Navigation, color: 'text-yellow-400' },
-      { label: 'Emergencies', value: emergencies, icon: AlertCircle, color: 'text-red-500' },
-    ];
-  }, [jobs]);
 
   // ── Callback when a new job is created via modal ──
   const handleJobCreated = useCallback(() => {
@@ -225,25 +212,7 @@ export default function Dashboard() {
       </nav>
 
       <main className="p-8 max-w-[1680px] mx-auto">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {stats.map((stat, i) => (
-            <div key={i} className="bg-[#161616] p-6 rounded-3xl border border-gray-800/50 hover:border-gray-700 transition-colors flex items-center gap-6 group">
-              <div className={cn(
-                "p-4 rounded-2xl bg-[#1f1f1f] group-hover:scale-110 transition-transform bg-opacity-10",
-                stat.color
-              )}>
-                <stat.icon size={32} />
-              </div>
-              <div>
-                <div className="text-3xl font-black tracking-tight">{stat.value}</div>
-                <div className="text-gray-500 text-[11px] font-bold uppercase tracking-[0.1em] mt-0.5">{stat.label}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ═══ Mini-Map Widget ═══ */}
+        {/* ═══ Live Fleet Map (primary focus of the landing page) ═══ */}
         <div className="mb-12">
           <MiniMapWidget />
         </div>
@@ -265,7 +234,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 mb-12">
               {jobs.map((job, i) => (
                 <div
                   key={i}
@@ -279,54 +248,48 @@ export default function Dashboard() {
                     }
                   }}
                   className={cn(
-                    "bg-[#161616] p-6 rounded-[2rem] border-l-[6px] border-t border-r border-b border-gray-800/40 hover:bg-[#1e1e1e] transition-all cursor-pointer group hover:shadow-2xl hover:shadow-black/40",
+                    "bg-[#161616] p-4 rounded-2xl border-l-4 border-t border-r border-b border-gray-800/40 hover:bg-[#1e1e1e] hover:border-gray-700 transition-all cursor-pointer group",
                     job.color,
-                    activeJob?.id === job.id && "ring-2 ring-yellow-500/50 bg-[#1e1e1e]"
+                    activeJob?.id === job.id && "ring-1 ring-yellow-500/50 bg-[#1e1e1e]"
                   )}
                 >
-                   <div className="flex justify-between items-start mb-6">
-                      <div className="p-3 bg-[#1f1f1f] rounded-2xl text-gray-400 group-hover:text-yellow-400 transition-colors"><Wrench size={20}/></div>
-                      <div className="text-right">
-                        <div className="text-gray-500 text-[10px] font-black uppercase tracking-widest leading-none mb-1">ID {job.id}</div>
-                        <div className="text-[10px] text-gray-600 font-medium italic">{job.date}</div>
-                      </div>
-                   </div>
-
-                  <h3 className="font-black text-xl mb-2 group-hover:text-yellow-50 text-white transition-colors">{job.title}</h3>
-
-                  <div className="space-y-2 mb-6">
-                    <div className="flex items-center gap-2 text-sm text-gray-300 font-medium">
-                      <Users size={14} className="text-yellow-500/50" /> {job.customer}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Navigation size={14} className="opacity-30" /> {job.address}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center pt-5 border-t border-gray-800/60">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <h3 className="font-bold text-sm text-white leading-tight truncate group-hover:text-yellow-50 transition-colors">{job.title}</h3>
                     <span className={cn(
-                      "text-[10px] font-black px-3 py-1.5 rounded-full tracking-wider",
+                      "shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full tracking-wider",
                       job.priority === 'EMERGENCY' && 'bg-red-500/10 text-red-500 border border-red-500/20',
                       job.priority === 'HIGH' && 'bg-orange-500/10 text-orange-500 border border-orange-500/20',
                       job.priority !== 'EMERGENCY' && job.priority !== 'HIGH' && 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
                     )}>
                       {job.priority}
                     </span>
-                    <div className="flex items-center gap-2 group/status">
-                      <div className={cn(
-                        "w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]",
-                        job.status === 'In Progress' ? 'bg-yellow-400 animate-pulse' :
-                          job.status === 'Completed' ? 'bg-green-500' : 'bg-orange-400'
-                      )}></div>
-                      <span className="text-[11px] font-bold text-gray-300 group-hover/status:text-white transition-colors">{job.status}</span>
-                      <ChevronRight size={14} className="text-gray-700 group-hover/status:translate-x-1 transition-transform" />
+                  </div>
+
+                  <div className="space-y-1 mb-3">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-300 truncate">
+                      <Users size={12} className="text-yellow-500/50 shrink-0" /> {job.customer}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 truncate">
+                      <Navigation size={12} className="opacity-30 shrink-0" /> {job.address}
                     </div>
                   </div>
 
+                  <div className="flex justify-between items-center pt-2.5 border-t border-gray-800/60">
+                    <div className="flex items-center gap-1.5 group/status">
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        job.status === 'In Progress' ? 'bg-yellow-400 animate-pulse' :
+                          job.status === 'Completed' ? 'bg-green-500' : 'bg-orange-400'
+                      )}></div>
+                      <span className="text-[10px] font-bold text-gray-400 group-hover/status:text-white transition-colors">{job.status}</span>
+                    </div>
+                    <span className="text-[9px] text-gray-600 font-medium italic">{job.date}</span>
+                  </div>
+
                   {job.assigned && (
-                    <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-yellow-500/5 rounded-xl border border-yellow-500/10">
-                      <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
-                      <span className="text-[10px] text-yellow-400 font-bold uppercase tracking-tight">Assigned: {job.assigned}</span>
+                    <div className="mt-2.5 flex items-center gap-1.5 px-2 py-1 bg-yellow-500/5 rounded-lg border border-yellow-500/10">
+                      <ChevronRight size={11} className="text-yellow-400 shrink-0" />
+                      <span className="text-[9px] text-yellow-400 font-bold uppercase tracking-tight truncate">{job.assigned}</span>
                     </div>
                   )}
                 </div>

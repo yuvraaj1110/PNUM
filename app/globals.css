@@ -17,7 +17,7 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ═══════════════════════════════════════════
@@ -45,7 +45,7 @@ body {
 .plumber-dot {
   width: 44px;
   height: 44px;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -56,8 +56,8 @@ body {
   letter-spacing: -0.5px;
   border: 3px solid rgba(255, 255, 255, 0.25);
   box-shadow:
-    0 0 0 3px rgba(59, 130, 246, 0.15),
-    0 0 24px rgba(59, 130, 246, 0.35),
+    0 0 0 3px rgba(250, 204, 21, 0.15),
+    0 0 24px rgba(250, 204, 21, 0.35),
     0 4px 16px rgba(0, 0, 0, 0.4);
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s, border-color 0.3s;
@@ -69,15 +69,15 @@ body {
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  border: 2px solid rgba(59, 130, 246, 0.15);
+  border: 2px solid rgba(250, 204, 21, 0.15);
   animation: plumber-ring 3s ease-in-out infinite;
 }
 
 .plumber-dot:hover {
   transform: scale(1.15);
   box-shadow:
-    0 0 0 4px rgba(59, 130, 246, 0.25),
-    0 0 32px rgba(59, 130, 246, 0.5),
+    0 0 0 4px rgba(250, 204, 21, 0.25),
+    0 0 32px rgba(250, 204, 21, 0.5),
     0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
@@ -169,7 +169,7 @@ body {
 .cluster-marker {
   width: 50px;
   height: 50px;
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #ca8a04 0%, #facc15 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -179,8 +179,8 @@ body {
   font-size: 18px;
   border: 3px solid rgba(255, 255, 255, 0.2);
   box-shadow:
-    0 0 0 4px rgba(59, 130, 246, 0.12),
-    0 0 30px rgba(59, 130, 246, 0.3),
+    0 0 0 4px rgba(250, 204, 21, 0.12),
+    0 0 30px rgba(250, 204, 21, 0.3),
     0 6px 20px rgba(0, 0, 0, 0.5);
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -189,8 +189,8 @@ body {
 .cluster-marker:hover {
   transform: scale(1.1);
   box-shadow:
-    0 0 0 5px rgba(59, 130, 246, 0.2),
-    0 0 40px rgba(59, 130, 246, 0.45),
+    0 0 0 5px rgba(250, 204, 21, 0.2),
+    0 0 40px rgba(250, 204, 21, 0.45),
     0 6px 24px rgba(0, 0, 0, 0.6);
 }
 
@@ -199,7 +199,7 @@ body {
    ═══════════════════════════════════════════ */
 
 .leaflet-container {
-  background: #0f1117 !important;
+  background: #0c0c0c !important;
   font-family: inherit;
 }
 
@@ -325,9 +325,9 @@ body {
 }
 
 .popup-priority.medium {
-  background: rgba(59, 130, 246, 0.12);
-  color: #3b82f6;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgba(250, 204, 21, 0.12);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.2);
 }
 
 .popup-priority.low {
@@ -379,7 +379,7 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: linear-gradient(135deg, #facc15, #eab308);
   color: white;
   font-weight: 900;
   font-size: 12px;
@@ -397,7 +397,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #0f1117;
+  background: #0c0c0c;
   gap: 16px;
   color: #6b7280;
   font-size: 13px;
@@ -410,7 +410,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #161922;
+  background: #161616;
   border-radius: 2rem;
 }
 
@@ -418,7 +418,7 @@ body {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(250, 204, 21, 0.15);
   animation: loader-beat 1.4s ease-in-out infinite;
 }
 
@@ -446,4 +446,19 @@ body {
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* ═══════════════════════════════════════════
+   Create Job Modal Animation
+   ═══════════════════════════════════════════ */
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
