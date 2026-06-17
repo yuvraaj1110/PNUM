@@ -534,3 +534,193 @@ Run: `npm run mcp`. Sample Claude Desktop config (`mcpServers`):
   }
 }
 ```
+
+---
+
+# Part C — Assignment Algorithm, Frontend, and Data Flow
+
+## C.1 Assignment scoring algorithm
+
+Source: `lib/scoring.ts` — **pure, dependency-free, unit-tested**
+(`lib/scoring.test.ts`). Given a job and a candidate technician, it produces a
+score in `[0, 1]` (higher = better fit) as a weighted sum of four sub-scores.
+
+### Sub-score formulas
+
+| Sub-score | Formula | Meaning |
+|---|---|---|
+| `distance` | `clamp01(1 - distanceKm / maxDistanceKm)`, `maxDistanceKm` default **25** | closer is better; 0 at ≥ 25 km |
+| `load` | `1 / (1 + max(0, activeLoad))` | fewer active jobs is better |
+| `skill` | `skillMatch ? 1 : 0.4` | has the required skill? |
+| `availability` | `active → 1`, `busy → 0.3`, `offline → 0` | status preference |
+
+`clamp01(n) = max(0, min(1, n))`.
+
+### Priority weight vectors
+
+Each vector sums to 1, so `score ∈ [0, 1]`:
+
+| Priority | distance | load | skill | availability |
+|---|---|---|---|---|
+| `emergency` | **0.55** | 0.15 | 0.15 | 0.15 |
+| `high` | **0.45** | 0.15 | 0.25 | 0.15 |
+| `medium` | **0.30** | 0.15 | 0.40 | 0.15 |
+| `low` | **0.30** | 0.15 | 0.40 | 0.15 |
+
+`score = w.distance·distance + w.load·load + w.skill·skill +
+w.availability·availability`, then `clamp01`.
+
+### Pseudocode
+
+```
+scoreCandidate(distanceKm, activeLoad, skillMatch, status, priority,
+               maxDistanceKm = 25):
+  w        = WEIGHTS[priority]
+  distance = clamp01(1 - distanceKm / maxDistanceKm)
+  load     = 1 / (1 + max(0, activeLoad))
+  skill    = skillMatch ? 1 : 0.4
+  avail    = status=='active' ? 1 : status=='busy' ? 0.3 : 0
+  score    = w.distance*distance + w.load*load + w.skill*skill + w.availability*avail
+  return { score: clamp01(score), breakdown: {distance, load, skill, avail} }
+
+rankCandidates(candidates, priority, topN = 3):
+  return candidates
+    .map(c => { ...c, ...scoreCandidate(c.distanceKm, c.activeLoad,
+                                        c.skillMatch, c.status, priority) })
+    .sort(desc by score)
+    .slice(0, topN)
+```
+
+Great-circle distance is the standard Haversine (`haversineKm`, R = 6371 km).
+
+### `findNearestAvailableTech` (the I/O wrapper — `lib/fleet-ops.ts`)
+
+```
+findNearestAvailableTech(sb, jobId, topN = 3):
+  1. load job (must have lat/lng, else throw)
+  2. fetch active techs: profiles where role in ('plumber','technician')
+                         and status = 'active' and current_location present
+  3. determine requiredSkill = requiredSkillForJob(job, skillNames):
+       text = lower(category + title + description)
+       first skill whose FIRST WORD appears in text wins (else null)
+     load technician_skills; a tech "has skill" if it has requiredSkillId
+     (if no required skill matched, every tech counts as a skill match)
+  4. loads = count of active assignments per tech
+  5. for each tech build a candidate:
+       distanceKm = haversine(job.lat,job.lng, tech.lat,tech.lng)
+       activeLoad = loads[tech]
+       skillMatch = requiredSkill ? techHasSkill(tech) : true
+       status     = 'active'
+  6. return rankCandidates(candidates, job.priority, topN)
+```
+
+`assign_job` recomputes this ranking (with `topN=50`) to record an auditable
+`score` and `distance_km` for the chosen technician — it never trusts a
+caller-supplied score.
+
+### Worked numeric example
+
+**Job:** `priority = emergency`, weights `{distance 0.55, load 0.15, skill 0.15,
+availability 0.15}`.
+
+**Candidate A — Alex Rivera:** 2 km away, `activeLoad = 0`, skill match, `active`.
+- `distance = 1 - 2/25 = 0.92` · `load = 1/(1+0) = 1.0` · `skill = 1` ·
+  `availability = 1`
+- `score = 0.55·0.92 + 0.15·1.0 + 0.15·1 + 0.15·1 = 0.506 + 0.45 = 0.956`
+
+**Candidate B — a farther tech:** 12 km away, `activeLoad = 1`, skill match,
+`active`.
+- `distance = 1 - 12/25 = 0.52` · `load = 1/(1+1) = 0.5` · `skill = 1` ·
+  `availability = 1`
+- `score = 0.55·0.52 + 0.15·0.5 + 0.15·1 + 0.15·1 = 0.286 + 0.075 + 0.30 = 0.661`
+
+Ranking puts **Alex Rivera (≈0.96)** above the farther candidate (≈0.66): for an
+emergency the heavy distance weight dominates. (`lib/scoring.test.ts` asserts the
+qualitative invariants: closer scores higher, matched skill scores higher,
+lighter load scores higher, `active > offline`, and for emergencies a very-close
+unskilled tech can outrank a far skilled one.)
+
+## C.2 Frontend
+
+Next.js App Router, all interactive pages are client components (`'use client'`).
+
+| Page / component | File | Fetch + subscribe | Notes |
+|---|---|---|---|
+| Dashboard | `app/page.tsx` | fetch `jobs` on mount; channel `dashboard-jobs` (jobs INSERT) prepends cards | hosts map, job board, `ActivityFeed`, `CopilotPanel`, `CreateJobModal` |
+| Live fleet | `app/fleet/page.tsx` | renders `FleetMapClient` via `dynamic(..., { ssr:false })` | proximity dispatch view |
+| Job detail | `app/jobs/[id]/` | per-job detail + audit timeline | dynamic route |
+| Analytics | `app/analytics/page.tsx` | `Promise.all` over `jobs` + 3 views; channel `analytics` re-loads on any change | Recharts; `mounted` gate (`if (!mounted) return null`) |
+| Login | `app/login/` | Supabase auth | PKCE → `/auth/callback` |
+| Fleet map (client) | `components/FleetMapClient.tsx` | — | Leaflet, loaded only client-side |
+| Mini map | `components/MiniMapWidget.tsx` | — | `dynamic(..., { ssr:false })` on the dashboard |
+| Activity feed | `components/ActivityFeed.tsx` | fetch last 12 `job_events`; channel `activity-feed` (INSERT) | uses `describeEvent` formatter |
+| Create job modal | `components/CreateJobModal.tsx` | `POST /api/jobs` | intake form |
+| Copilot panel | `components/CopilotPanel.tsx` | `POST /api/copilot`; renders the confirm gate | holds the transcript client-side |
+
+**Map + chart SSR pattern.** Leaflet touches `window`, and Recharts measures the
+DOM, so both must not server-render. The app uses two complementary techniques:
+- **Dynamic import with `ssr:false`** for map components:
+  `const MiniMapWidget = dynamic(() => import('@/components/MiniMapWidget'),
+  { ssr:false, loading: () => <skeleton/> })` (same for `FleetMapClient`).
+- **A `mounted` flag** on the analytics page: `useState(false)` set to `true` in
+  `useEffect`, with `if (!mounted) return null` before rendering charts, so the
+  first client render matches the (empty) server render and Recharts only mounts
+  in the browser.
+
+**Browser Supabase client** (`lib/supabase.ts`): created from
+`NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`. If
+credentials are missing it returns a harmless placeholder client so the UI runs
+offline against `lib/mockData.ts` seeds.
+
+**Analytics KPIs** (`lib/analytics.ts`, pure): `summarizeJobs` (counts by
+status/priority), `slaBreachRate` (% of `v_sla_breaches` rows where
+`is_breach`), `avgResponseMinutes` (mean of non-null `response_minutes`),
+`utilizationSummary`. These feed the KPI cards and Recharts donut/bar charts.
+
+## C.3 End-to-end data flow
+
+**Create job (dispatcher):** `CreateJobModal` → `POST /api/jobs` →
+`create_customer` RPC + insert `jobs` + `logJobEvent('created')` (+ optional
+assign & `busy` + `assigned` event) → Postgres → Realtime INSERT on `jobs` →
+`dashboard-jobs` channel prepends the card; `activity-feed` shows the new event;
+`analytics` re-aggregates.
+
+**Live technician movement:** `scripts/simulateMovement.ts` UPDATEs
+`profiles.current_location` → Realtime `postgres_changes` UPDATE → `fleet-map`
+channel in `useFleetSubscription` patches the marker → map animates the marker to
+the new position.
+
+**Copilot dispatch (human-in-the-loop):** dispatcher asks in `CopilotPanel` →
+`POST /api/copilot` → LLM calls `find_nearest_available_tech` (read) → ranked
+reply → dispatcher clicks **Approve** → `POST /api/copilot` with
+`confirm:{approve:true}` → `assign_job` writes the `assignments` row, sets the
+job `assigned`, marks the tech `busy`, appends a `job_events` `assigned` row →
+Realtime fans the changes out to the dashboard, activity feed, and analytics.
+
+## C.4 MCP appendix — one core, two surfaces
+
+The agentic layer's defining property: **`lib/fleet-ops.ts` is the single source
+of truth for fleet-ops business logic, and `lib/fleet-tools.ts` is the single
+tool catalog + dispatcher.** Every fleet-ops function takes a `SupabaseClient`
+(dependency injection), so the exact same code backs both consumers:
+
+- **The MCP server** (`mcp-server/index.ts`) imports `FLEET_TOOLS` +
+  `executeTool` and exposes them as MCP tools over stdio to any MCP client
+  (Claude Desktop, Claude Code, custom agents).
+- **The copilot route** (`app/api/copilot/route.ts`) maps the *same*
+  `FLEET_TOOLS` into OpenAI function-tool definitions and calls the *same*
+  `executeTool` dispatcher inside its tool-calling loop.
+
+Because both surfaces share one catalog and one dispatcher, the MCP tool surface
+and the in-app copilot can never drift apart, and the pure scoring logic
+(`lib/scoring.ts`) is exercised identically by both. The one write tool
+(`assign_job`) is gated behind dispatcher confirmation in the copilot path,
+while MCP clients invoke it directly (trusted, service-role context).
+
+---
+
+## Build / run quick reference
+
+`npm install` → `npm run dev` (app) · `npm run mcp` (MCP server) ·
+`npm run simulate` (movement) · `npm test` (vitest). Full environment and
+database migration order: see `SETUP.md`.
